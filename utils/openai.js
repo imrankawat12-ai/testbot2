@@ -1,6 +1,6 @@
 // Gemini API Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyB0OvTBPGU3CU6WT0E_WgI7fc2OwlEsgZU";
-const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-1.5-flash"; // Default model
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-1.5-flash"; 
 
 const SYSTEM_PROMPT = "You are a helpful AI assistant that answers questions using the provided knowledge base. Always give clear and helpful answers.";
 
@@ -15,6 +15,9 @@ export async function generateChatResponse(messages, knowledgeContext) {
     };
   }
 
+  // Ensure model name doesn't have accidental "models/" prefix twice
+  const cleanModelName = MODEL_NAME.startsWith("models/") ? MODEL_NAME.split("/")[1] : MODEL_NAME;
+
   // Construct the prompt with context
   const contextHeader = knowledgeContext 
     ? `KNOWLEDGE BASE CONTEXT:\n${knowledgeContext}\n\n` 
@@ -22,9 +25,6 @@ export async function generateChatResponse(messages, knowledgeContext) {
   
   const prompt = `${SYSTEM_PROMPT}\n\n${contextHeader}User Query: ${messages[messages.length - 1].content}`;
 
-  // Prepare Gemini conversation format
-  // Note: For simplicity in this demo, we send the key context + latest message. 
-  // Gemini's generateContent expects 'contents' array.
   const contents = [
     {
       parts: [{ text: prompt }]
@@ -32,7 +32,8 @@ export async function generateChatResponse(messages, knowledgeContext) {
   ];
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+    // Switching to v1 stable endpoint
+    const url = `https://generativelanguage.googleapis.com/v1/models/${cleanModelName}:generateContent?key=${GEMINI_API_KEY}`;
     
     const response = await fetch(url, {
       method: "POST",
@@ -45,7 +46,8 @@ export async function generateChatResponse(messages, knowledgeContext) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error?.message || "Gemini API error");
+      // If v1 fails, it might be a model availability issue or account restriction
+      throw new Error(data.error?.message || `API Error (${response.status})`);
     }
 
     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm sorry, I couldn't generate a response.";
