@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 // OpenAI Configuration
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "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";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "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";
 const MODEL_NAME = "gpt-4o-mini"; 
 
 // Initialize OpenAI client
