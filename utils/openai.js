@@ -1,69 +1,64 @@
-let openai;
-
-function getClient() {
-  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
-  if (!openai && apiKey) {
-    openai = new OpenAI({
-      apiKey: apiKey,
-      baseURL: "https://openrouter.ai/api/v1",
-      defaultHeaders: {
-        "HTTP-Referer": "https://github.com/imrankawat12-ai/ai-chatbot-demo",
-        "X-Title": "AI Chatbot Demo",
-      }
-    });
-  }
-  return openai;
-}
+// Gemini API Configuration
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyB0OvTBPGU3CU6WT0E_WgI7fc2OwlEsgZU";
+const MODEL_NAME = "gemini-1.5-flash"; // Fast and efficient for chat
 
 const SYSTEM_PROMPT = "You are a helpful AI assistant that answers questions using the provided knowledge base. Always give clear and helpful answers.";
 
+/**
+ * Generates a response using Google's Gemini API
+ */
 export async function generateChatResponse(messages, knowledgeContext) {
-  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
-  const modelName = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini"; 
-
-  if (!apiKey) {
+  if (!GEMINI_API_KEY) {
     return {
       success: false,
-      message: "Configuration Error: API Key is not set in Vercel Environment Variables.",
+      message: "Configuration Error: GEMINI_API_KEY is not set.",
     };
   }
 
-  const client = getClient();
-  if (!client) {
-    return {
-      success: false,
-      message: "Failed to initialize AI client. Check your API key.",
-    };
-  }
+  // Construct the prompt with context
+  const contextHeader = knowledgeContext 
+    ? `KNOWLEDGE BASE CONTEXT:\n${knowledgeContext}\n\n` 
+    : "No specific knowledge base context was provided.\n\n";
+  
+  const prompt = `${SYSTEM_PROMPT}\n\n${contextHeader}User Query: ${messages[messages.length - 1].content}`;
 
-  // Construct the system prompt with the dynamically fetched context
-  const fullSystemMessage = `${SYSTEM_PROMPT}\n\n--- KNOWLEDGE BASE ---\n${knowledgeContext || "No specific knowledge base context was retrieved."}\n----------------------`;
-
-  // Prepare the conversation history
-  const apiMessages = [
-    { role: "system", content: fullSystemMessage },
-    ...messages.map((msg) => ({
-      role: msg.role === "user" ? "user" : "assistant",
-      content: msg.content,
-    })),
+  // Prepare Gemini conversation format
+  // Note: For simplicity in this demo, we send the key context + latest message. 
+  // Gemini's generateContent expects 'contents' array.
+  const contents = [
+    {
+      parts: [{ text: prompt }]
+    }
   ];
 
   try {
-    const response = await client.chat.completions.create({
-      model: modelName,
-      messages: apiMessages,
-      temperature: 0.3,
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contents }),
     });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || "Gemini API error");
+    }
+
+    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm sorry, I couldn't generate a response.";
 
     return {
       success: true,
-      message: response.choices[0].message.content,
+      message: aiText,
     };
   } catch (error) {
-    console.error("AI API Error:", error);
+    console.error("Gemini API Error:", error);
     return {
       success: false,
-      message: "I'm sorry, I encountered an error while communicating with the AI service.",
+      message: "I encountered an error connecting to Gemini. Please check your API key and connection.",
       error: error.message,
     };
   }
