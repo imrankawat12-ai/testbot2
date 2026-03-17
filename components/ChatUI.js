@@ -42,9 +42,10 @@ export default function ChatUI() {
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     } catch (error) {
       console.error("Chat Error:", error);
+      const errorMsg = error.message || "Unknown error";
       setMessages((prev) => [...prev, { 
         role: "assistant", 
-        content: "Oops! Something went wrong while connecting to the AI. Please try again later.", 
+        content: `Connection Error: ${errorMsg}. Please check your Vercel Environment Variables.`, 
         isError: true 
       }]);
     } finally {
