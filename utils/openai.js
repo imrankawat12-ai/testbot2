@@ -1,6 +1,6 @@
 // Gemini API Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyB0OvTBPGU3CU6WT0E_WgI7fc2OwlEsgZU";
-const MODEL_NAME = "gemini-1.5-flash"; // Fast and efficient for chat
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-1.5-flash"; // Default model
 
 const SYSTEM_PROMPT = "You are a helpful AI assistant that answers questions using the provided knowledge base. Always give clear and helpful answers.";
 
