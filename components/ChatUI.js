@@ -42,7 +42,8 @@ export default function ChatUI() {
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     } catch (error) {
       console.error(error);
-      setMessages((prev) => [...prev, { role: "assistant", content: "Oops! Something went wrong while connecting to the AI. Please try again later.", isError: true }]);
+      const errorMsg = error.message || "Something went wrong while connecting to the AI.";
+      setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${errorMsg}`, isError: true }]);
     } finally {
       setIsLoading(false);
       // Ensure focus returns to input after sending desktop

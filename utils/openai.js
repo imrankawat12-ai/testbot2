@@ -55,11 +55,11 @@ export async function generateChatResponse(messages, knowledgeContext) {
       message: aiText,
     };
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini API Error details:", error);
     return {
       success: false,
-      message: "I encountered an error connecting to Gemini. Please check your API key and connection.",
-      error: error.message,
+      message: `Gemini Error: ${error.message || "Unknown error"}`,
+      error: error.toString(),
     };
   }
 }
