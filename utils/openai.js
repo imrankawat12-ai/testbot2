@@ -1,66 +1,55 @@
-// Gemini API Configuration
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyB0OvTBPGU3CU6WT0E_WgI7fc2OwlEsgZU";
-const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.0-flash"; 
+import OpenAI from "openai";
+
+// OpenAI Configuration
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "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";
+const MODEL_NAME = "gpt-4o-mini"; 
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY,
+});
 
 const SYSTEM_PROMPT = "You are a helpful AI assistant that answers questions using the provided knowledge base. Always give clear and helpful answers.";
 
 /**
- * Generates a response using Google's Gemini API
+ * Generates a response using OpenAI's GPT models
  */
 export async function generateChatResponse(messages, knowledgeContext) {
-  if (!GEMINI_API_KEY) {
+  if (!OPENAI_API_KEY) {
     return {
       success: false,
-      message: "Configuration Error: GEMINI_API_KEY is not set.",
+      message: "Configuration Error: OPENAI_API_KEY is not set.",
     };
   }
 
-  // Ensure model name doesn't have accidental "models/" prefix twice
-  const cleanModelName = MODEL_NAME.startsWith("models/") ? MODEL_NAME.split("/")[1] : MODEL_NAME;
+  // Construct the system prompt with context
+  const fullSystemMessage = `${SYSTEM_PROMPT}\n\n--- KNOWLEDGE BASE ---\n${knowledgeContext || "No specific knowledge base context was retrieved."}\n----------------------`;
 
-  // Construct the prompt with context
-  const contextHeader = knowledgeContext 
-    ? `KNOWLEDGE BASE CONTEXT:\n${knowledgeContext}\n\n` 
-    : "No specific knowledge base context was provided.\n\n";
-  
-  const prompt = `${SYSTEM_PROMPT}\n\n${contextHeader}User Query: ${messages[messages.length - 1].content}`;
-
-  const contents = [
-    {
-      parts: [{ text: prompt }]
-    }
+  // Prepare the conversation history
+  const apiMessages = [
+    { role: "system", content: fullSystemMessage },
+    ...messages.map((msg) => ({
+      role: msg.role === "user" ? "user" : "assistant",
+      content: msg.content,
+    })),
   ];
 
   try {
-    // Switching to v1 stable endpoint
-    const url = `https://generativelanguage.googleapis.com/v1/models/${cleanModelName}:generateContent?key=${GEMINI_API_KEY}`;
-    
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ contents }),
+    const response = await openai.chat.completions.create({
+      model: MODEL_NAME,
+      messages: apiMessages,
+      temperature: 0.3,
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      // If v1 fails, it might be a model availability issue or account restriction
-      throw new Error(data.error?.message || `API Error (${response.status})`);
-    }
-
-    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm sorry, I couldn't generate a response.";
 
     return {
       success: true,
-      message: aiText,
+      message: response.choices[0].message.content,
     };
   } catch (error) {
-    console.error("Gemini API Error details:", error);
+    console.error("OpenAI API Error details:", error);
     return {
       success: false,
-      message: `Gemini Error: ${error.message || "Unknown error"}`,
+      message: `OpenAI Error: ${error.message || "Unknown error"}`,
       error: error.toString(),
     };
   }
