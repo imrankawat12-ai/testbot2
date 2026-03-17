@@ -1,13 +1,19 @@
 import OpenAI from "openai";
 
 // OpenAI Configuration
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "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";
 const MODEL_NAME = "gpt-4o-mini"; 
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: OPENAI_API_KEY,
-});
+// Initialize OpenAI client lazily to handle missing keys during build
+let openai;
+function getClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!openai && apiKey) {
+    openai = new OpenAI({
+      apiKey: apiKey,
+    });
+  }
+  return openai;
+}
 
 const SYSTEM_PROMPT = "You are a helpful AI assistant that answers questions using the provided knowledge base. Always give clear and helpful answers.";
 
@@ -15,12 +21,16 @@ const SYSTEM_PROMPT = "You are a helpful AI assistant that answers questions usi
  * Generates a response using OpenAI's GPT models
  */
 export async function generateChatResponse(messages, knowledgeContext) {
-  if (!OPENAI_API_KEY) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  
+  if (!apiKey) {
     return {
       success: false,
-      message: "Configuration Error: OPENAI_API_KEY is not set.",
+      message: "Configuration Error: OPENAI_API_KEY is not set in Environment Variables.",
     };
   }
+
+  const client = getClient();
 
   // Construct the system prompt with context
   const fullSystemMessage = `${SYSTEM_PROMPT}\n\n--- KNOWLEDGE BASE ---\n${knowledgeContext || "No specific knowledge base context was retrieved."}\n----------------------`;
@@ -35,7 +45,7 @@ export async function generateChatResponse(messages, knowledgeContext) {
   ];
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: MODEL_NAME,
       messages: apiMessages,
       temperature: 0.3,
